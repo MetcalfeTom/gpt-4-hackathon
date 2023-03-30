@@ -1,15 +1,13 @@
 import openai
 import os
-import pandas as pd
 import streamlit as st
 import pandas as pd
-import seaborn as sns
+
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def prompt_gpt_4_to_explore_data(input_message, df):
-
     sample = df.sample(3)
 
     response = openai.ChatCompletion.create(
@@ -43,16 +41,22 @@ def prompt_gpt_4_to_plot_data(input_message, df):
                 "role": "system",
                 "content": "You are a expert data analyst, with fantastic pandas skills.",
             },
-            {"role": "user", "content": f"Here's an example from a dataset: {sample}"},
             {
                 "role": "user",
-                "content": f"Convert this query into a seaborn plot.  Write a one-line python command: {input_message}",
+                "content": f"Here's an example from a dataframe: {sample}",
             },
-            {"role": "assistant", "content": "plot ="},
+            {
+                "role": "user",
+                "content": f"Create a function `def app(df)` to represent this query as streamlit code. The dataframe is already a global variable named df: {input_message}",
+            },
         ],
     )
     generated_text = response["choices"][0]["message"]["content"].strip()
     print(f"Generated response: {generated_text}")
+
+    if generated_text.count("app(df)") < 2:
+        generated_text += "\n\napp(df)"
+
     return generated_text
 
 
@@ -81,23 +85,17 @@ def app():
     # Display the filtered dataframe
     st.write(new_df)
 
-    new_query = st.text_input("Enter query 2:")
-
+    new_query = st.text_input("Enter query to turn into streamlit code:")
     text = prompt_gpt_4_to_plot_data(new_query, new_df)
     print(text)
     text = filter_generated_sequence(text)
-
-    plot = eval(text)
-
-    st.pyplot(plot)
+    exec(text)
 
 
 def filter_generated_sequence(text):
     if "```python" in text:
         text = get_python_code(text)
-        print(text)
-    if " = " in text:
-        text = text.split(" = ")[1]
+        text = text.strip(" \n")
         print(text)
     return text
 
