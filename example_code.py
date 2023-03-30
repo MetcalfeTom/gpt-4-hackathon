@@ -2,7 +2,7 @@ import openai
 import os
 import streamlit as st
 import pandas as pd
-
+import matplotlib.pyplot as plt
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -50,9 +50,12 @@ def prompt_gpt_4_to_plot_data(input_message, df):
                 "content": f"Create a function `def app(df)` to represent this query as streamlit code. The dataframe is already a global variable named df: {input_message}",
             },
         ],
+        temperature=0.9
     )
     generated_text = response["choices"][0]["message"]["content"].strip()
     print(f"Generated response: {generated_text}")
+
+    generated_text = filter_generated_sequence(generated_text)
 
     if generated_text.count("app(df)") < 2:
         generated_text += "\n\napp(df)"
@@ -74,19 +77,8 @@ def app():
     st.title("My Dataframe")
     st.write(df)
 
-    query = st.text_input("Enter query:")
-
-    text = prompt_gpt_4_to_explore_data(query, df)
-    print(text)
-    text = filter_generated_sequence(text)
-
-    new_df = eval(text)
-
-    # Display the filtered dataframe
-    st.write(new_df)
-
     new_query = st.text_input("Enter query to turn into streamlit code:")
-    text = prompt_gpt_4_to_plot_data(new_query, new_df)
+    text = prompt_gpt_4_to_plot_data(new_query, df)
     print(text)
     text = filter_generated_sequence(text)
     exec(text)
